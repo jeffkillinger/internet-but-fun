@@ -7,6 +7,7 @@ import {
   createSolvedCube,
   deserializeCube,
   generateScramble,
+  hashCubeState,
   isSolved,
   serializeCube,
   type MoveNotation,
@@ -38,6 +39,17 @@ describe("cube logic", () => {
   it("round-trips serialized state", () => {
     const cube = applyMoves(createSolvedCube(), ["R", "U", "F2"]);
     expect(deserializeCube(serializeCube(cube))).toEqual(cube);
+  });
+
+  it("returns the same hash for the same serialized state", () => {
+    const serialized = serializeCube(createSolvedCube());
+    expect(hashCubeState(serialized)).toBe(hashCubeState(serialized));
+  });
+
+  it("returns a different hash after one move", () => {
+    const solved = serializeCube(createSolvedCube());
+    const moved = serializeCube(applyMove(createSolvedCube(), "R"));
+    expect(hashCubeState(moved)).not.toBe(hashCubeState(solved));
   });
 
   it("generates scrambles of the requested length", () => {

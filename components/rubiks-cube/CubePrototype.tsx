@@ -64,6 +64,11 @@ export function CubePrototype() {
     setHistory([]);
   }
 
+  function handleApplySequence(moves: readonly Move[]) {
+    cancelMove();
+    setHistory((currentHistory) => [...currentHistory, ...moves]);
+  }
+
   return (
     <div className="grid gap-10">
       <section aria-labelledby="cube-net">
@@ -141,6 +146,7 @@ export function CubePrototype() {
         history={history}
         currentSolved={solved}
         previewSolved={previewSolved}
+        onApplySequence={handleApplySequence}
       />
     </div>
   );
