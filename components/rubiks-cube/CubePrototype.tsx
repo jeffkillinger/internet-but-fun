@@ -101,6 +101,11 @@ export function CubePrototype() {
           Derived from the same cube state as the net. R-family move previews
           animate; other state changes snap to their resulting state.
         </p>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+          Moves are cube-relative. R always turns the cube&apos;s Right face,
+          even if you rotate the camera. Use Reset View to return to the
+          canonical orientation.
+        </p>
         <div className="mt-4">
           <DynamicCubeScene
             currentCube={currentCube}
