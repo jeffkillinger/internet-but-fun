@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 
 import type { CubeState, Move } from "@/src/lib/cube";
 
+import type { SelectedFace } from "./getSelectedFace";
+
 const CubeScene = dynamic(() => import("./CubeScene"), {
   ssr: false,
   loading: () => (
@@ -17,6 +19,8 @@ type DynamicCubeSceneProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  selectedFace: SelectedFace | null;
+  onSelectFace: (selectedFace: SelectedFace | null) => void;
 };
 
 export function DynamicCubeScene(props: DynamicCubeSceneProps) {

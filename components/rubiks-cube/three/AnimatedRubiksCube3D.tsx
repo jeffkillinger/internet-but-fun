@@ -5,6 +5,7 @@ import { Group, Vector3 } from "three";
 import type { CubeState, Move } from "@/src/lib/cube";
 
 import { getMoveGeometry, type MoveGeometry } from "./getMoveGeometry";
+import type { SelectedFace } from "./getSelectedFace";
 import { CUBIE_POSITIONS, RubiksCube3D } from "./RubiksCube3D";
 
 const QUARTER_TURN_DURATION_SECONDS = 0.3;
@@ -19,6 +20,8 @@ type AnimatedRubiksCube3DProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  selectedFace: SelectedFace | null;
+  onSelectFace: (selectedFace: SelectedFace) => void;
 };
 
 function isAnimatedMove(move: Move | null): move is Move {
@@ -29,6 +32,8 @@ export function AnimatedRubiksCube3D({
   currentCube,
   previewCube,
   pendingMove,
+  selectedFace,
+  onSelectFace,
 }: AnimatedRubiksCube3DProps) {
   const sourceGroup = useRef<Group>(null);
   const sliceGroup = useRef<Group>(null);
@@ -106,13 +111,27 @@ export function AnimatedRubiksCube3D({
   return (
     <group>
       <group ref={sourceGroup} visible={false}>
-        <RubiksCube3D cube={currentCube} positions={stationaryPositions} />
+        <RubiksCube3D
+          cube={currentCube}
+          positions={stationaryPositions}
+          selectedFace={selectedFace}
+          onSelectFace={onSelectFace}
+        />
         <group ref={sliceGroup}>
-          <RubiksCube3D cube={currentCube} positions={slicePositions} />
+          <RubiksCube3D
+            cube={currentCube}
+            positions={slicePositions}
+            selectedFace={selectedFace}
+            onSelectFace={onSelectFace}
+          />
         </group>
       </group>
       <group ref={destinationGroup}>
-        <RubiksCube3D cube={previewCube} />
+        <RubiksCube3D
+          cube={previewCube}
+          selectedFace={selectedFace}
+          onSelectFace={onSelectFace}
+        />
       </group>
     </group>
   );

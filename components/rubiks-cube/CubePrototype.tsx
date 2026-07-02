@@ -16,6 +16,7 @@ import { DevPanel } from "./DevPanel";
 import { MoveControls } from "./MoveControls";
 import { MoveHistory } from "./MoveHistory";
 import { DynamicCubeScene } from "./three/DynamicCubeScene";
+import type { SelectedFace } from "./three/getSelectedFace";
 import { usePendingMove } from "./usePendingMove";
 
 const DEVELOPMENT_BUTTON =
@@ -24,6 +25,7 @@ const DEVELOPMENT_BUTTON =
 export function CubePrototype() {
   const [scramble, setScramble] = useState<Move[]>([]);
   const [history, setHistory] = useState<Move[]>([]);
+  const [selectedFace, setSelectedFace] = useState<SelectedFace | null>(null);
 
   const currentCube = useMemo(
     () => applyMoves(applyMoves(createSolvedCube(), scramble), history),
@@ -43,29 +45,49 @@ export function CubePrototype() {
   const previewSolved = isSolved(previewCube);
   const moveCount = countMoves(history);
 
+  function handleSelectMove(move: Move) {
+    setSelectedFace(null);
+    selectMove(move);
+  }
+
+  function handleConfirmMove() {
+    setSelectedFace(null);
+    confirmMove();
+  }
+
+  function handleCancelMove() {
+    setSelectedFace(null);
+    cancelMove();
+  }
+
   function handleScramble() {
+    setSelectedFace(null);
     cancelMove();
     setScramble(generateScramble(20));
     setHistory([]);
   }
 
   function handleReset() {
+    setSelectedFace(null);
     cancelMove();
     setScramble([]);
     setHistory([]);
   }
 
   function handleUndo() {
+    setSelectedFace(null);
     cancelMove();
     setHistory((moves) => moves.slice(0, -1));
   }
 
   function handleClearHistory() {
+    setSelectedFace(null);
     cancelMove();
     setHistory([]);
   }
 
   function handleApplySequence(moves: readonly Move[]) {
+    setSelectedFace(null);
     cancelMove();
     setHistory((currentHistory) => [...currentHistory, ...moves]);
   }
@@ -111,15 +133,17 @@ export function CubePrototype() {
             currentCube={currentCube}
             previewCube={previewCube}
             pendingMove={pendingMove}
+            selectedFace={selectedFace}
+            onSelectFace={setSelectedFace}
           />
         </div>
       </section>
 
       <MoveControls
-        onMove={selectMove}
+        onMove={handleSelectMove}
         pendingMove={pendingMove}
-        onConfirm={confirmMove}
-        onCancel={cancelMove}
+        onConfirm={handleConfirmMove}
+        onCancel={handleCancelMove}
       />
 
       <section aria-labelledby="development-controls">

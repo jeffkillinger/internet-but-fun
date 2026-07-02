@@ -9,17 +9,22 @@ import type { CubeState, Move } from "@/src/lib/cube";
 
 import { AnimatedRubiksCube3D } from "./AnimatedRubiksCube3D";
 import { CanonicalFaceLabels } from "./CanonicalFaceLabels";
+import type { SelectedFace } from "./getSelectedFace";
 
 type CubeSceneProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  selectedFace: SelectedFace | null;
+  onSelectFace: (selectedFace: SelectedFace | null) => void;
 };
 
 export default function CubeScene({
   currentCube,
   previewCube,
   pendingMove,
+  selectedFace,
+  onSelectFace,
 }: CubeSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -33,13 +38,18 @@ export default function CubeScene({
 
   return (
     <div className="relative h-80 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
-      <Canvas camera={{ position: [5, 5, 7], fov: 45 }}>
+      <Canvas
+        camera={{ position: [5, 5, 7], fov: 45 }}
+        onPointerMissed={() => onSelectFace(null)}
+      >
         <ambientLight intensity={1.5} />
         <directionalLight position={[4, 5, 3]} intensity={2.5} />
         <AnimatedRubiksCube3D
           currentCube={currentCube}
           previewCube={previewCube}
           pendingMove={pendingMove}
+          selectedFace={selectedFace}
+          onSelectFace={onSelectFace}
         />
         <CanonicalFaceLabels />
         <OrbitControls ref={controlsRef} enablePan={false} />
