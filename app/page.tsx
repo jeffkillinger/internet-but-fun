@@ -9,10 +9,10 @@ type Project = {
 const projects: Project[] = [
   {
     day: 1,
-    title: "One Good Thing",
-    description: "A small place to save one good thing from each day.",
-    href: "#",
-    status: "planned",
+    title: "Rubik's Cube",
+    description: "One shared cube, with exactly one move for every visitor.",
+    href: "/rubiks-cube",
+    status: "built",
   },
   {
     day: 2,
