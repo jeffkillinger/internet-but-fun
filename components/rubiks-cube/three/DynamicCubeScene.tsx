@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import type { CubeState } from "@/src/lib/cube";
+
 const CubeScene = dynamic(() => import("./CubeScene"), {
   ssr: false,
   loading: () => (
@@ -11,6 +13,10 @@ const CubeScene = dynamic(() => import("./CubeScene"), {
   ),
 });
 
-export function DynamicCubeScene() {
-  return <CubeScene />;
+type DynamicCubeSceneProps = {
+  cube: CubeState;
+};
+
+export function DynamicCubeScene({ cube }: DynamicCubeSceneProps) {
+  return <CubeScene cube={cube} />;
 }

@@ -15,6 +15,7 @@ import { CubeNet } from "./CubeNet";
 import { DevPanel } from "./DevPanel";
 import { MoveControls } from "./MoveControls";
 import { MoveHistory } from "./MoveHistory";
+import { DynamicCubeScene } from "./three/DynamicCubeScene";
 import { usePendingMove } from "./usePendingMove";
 
 const DEVELOPMENT_BUTTON =
@@ -89,6 +90,19 @@ export function CubePrototype() {
         </p>
         <div className="mt-4 flex justify-center overflow-x-auto">
           <CubeNet currentCube={currentCube} previewCube={previewCube} />
+        </div>
+      </section>
+
+      <section aria-labelledby="experimental-cube-scene">
+        <h2 id="experimental-cube-scene" className="text-lg font-semibold">
+          Experimental 3D scene
+        </h2>
+        <p className="mt-2 text-sm text-zinc-600">
+          Derived from the same cube state as the net. Moves and previews snap
+          to their resulting state; animation is not implemented yet.
+        </p>
+        <div className="mt-4">
+          <DynamicCubeScene cube={previewCube} />
         </div>
       </section>
 

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CubePrototype } from "@/components/rubiks-cube/CubePrototype";
-import { DynamicCubeScene } from "@/components/rubiks-cube/three/DynamicCubeScene";
 
 export const metadata: Metadata = {
   title: "Rubik's Cube | Internet, But Fun",
@@ -29,19 +28,6 @@ export default function RubiksCubePage() {
 
       <section className="mt-14">
         <CubePrototype />
-      </section>
-
-      <section className="mt-14" aria-labelledby="experimental-cube-scene">
-        <h2 id="experimental-cube-scene" className="text-lg font-semibold">
-          Experimental 3D scene
-        </h2>
-        <p className="mt-2 text-sm text-zinc-600">
-          Rendering foundation only. This cube is not connected to the cube
-          engine.
-        </p>
-        <div className="mt-4">
-          <DynamicCubeScene />
-        </div>
       </section>
     </main>
   );

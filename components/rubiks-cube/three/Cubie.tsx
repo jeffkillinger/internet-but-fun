@@ -1,3 +1,5 @@
+import type { CubeState } from "@/src/lib/cube";
+
 import {
   BOX_MATERIAL_FACES,
   CUBIE_SIZE,
@@ -6,11 +8,12 @@ import {
 import { getCubieFaceColors } from "./getCubieFaceColors";
 
 type CubieProps = {
+  cube: CubeState;
   position: CubiePosition;
 };
 
-export function Cubie({ position }: CubieProps) {
-  const faceColors = getCubieFaceColors(position);
+export function Cubie({ cube, position }: CubieProps) {
+  const faceColors = getCubieFaceColors(cube, position);
 
   return (
     <mesh position={position}>
