@@ -35,7 +35,6 @@ export function AnimatedRubiksCube3D({
   const destinationGroup = useRef<Group>(null);
   const animation = useRef<ActiveAnimation | null>(null);
   const rotationAxis = useRef(new Vector3());
-  const previousPendingMove = useRef<Move | null>(null);
   const previousCurrentCube = useRef(currentCube);
 
   const geometry = isAnimatedMove(pendingMove)
@@ -58,12 +57,9 @@ export function AnimatedRubiksCube3D({
     const destination = destinationGroup.current;
     if (!source || !slice || !destination) return;
 
-    const previousMove = previousPendingMove.current;
     const currentStateUnchanged = previousCurrentCube.current === currentCube;
     const shouldStart =
-      previousMove === null &&
-      currentStateUnchanged &&
-      isAnimatedMove(pendingMove);
+      currentStateUnchanged && isAnimatedMove(pendingMove);
 
     animation.current = null;
     slice.rotation.set(0, 0, 0);
@@ -80,7 +76,6 @@ export function AnimatedRubiksCube3D({
       };
     }
 
-    previousPendingMove.current = pendingMove;
     previousCurrentCube.current = currentCube;
   }, [currentCube, pendingMove, previewCube]);
 
