@@ -98,11 +98,15 @@ export function CubePrototype() {
           Experimental 3D scene
         </h2>
         <p className="mt-2 text-sm text-zinc-600">
-          Derived from the same cube state as the net. Moves and previews snap
-          to their resulting state; animation is not implemented yet.
+          Derived from the same cube state as the net. R-family move previews
+          animate; other state changes snap to their resulting state.
         </p>
         <div className="mt-4">
-          <DynamicCubeScene cube={previewCube} />
+          <DynamicCubeScene
+            currentCube={currentCube}
+            previewCube={previewCube}
+            pendingMove={pendingMove}
+          />
         </div>
       </section>
 
