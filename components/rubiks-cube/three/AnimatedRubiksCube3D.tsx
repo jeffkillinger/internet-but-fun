@@ -22,7 +22,7 @@ type AnimatedRubiksCube3DProps = {
 };
 
 function isAnimatedMove(move: Move | null): move is Move {
-  return move?.face === "R";
+  return move !== null;
 }
 
 export function AnimatedRubiksCube3D({

@@ -10,28 +10,36 @@ export type MoveGeometry = Readonly<{
   slicePredicate: (position: CubiePosition) => boolean;
 }>;
 
-const FACE_AXES = {
-  U: [0, 1, 0],
-  D: [0, -1, 0],
-  L: [-1, 0, 0],
-  R: [1, 0, 0],
-  F: [0, 0, 1],
-  B: [0, 0, -1],
-} as const satisfies Record<Move["face"], RotationAxis>;
+const FACE_GEOMETRY = {
+  U: { axis: [0, 1, 0], layer: 1, clockwiseSign: -1 },
+  D: { axis: [0, 1, 0], layer: -1, clockwiseSign: 1 },
+  L: { axis: [1, 0, 0], layer: -1, clockwiseSign: 1 },
+  R: { axis: [1, 0, 0], layer: 1, clockwiseSign: -1 },
+  F: { axis: [0, 0, 1], layer: 1, clockwiseSign: -1 },
+  B: { axis: [0, 0, 1], layer: -1, clockwiseSign: 1 },
+} as const satisfies Record<
+  Move["face"],
+  {
+    axis: RotationAxis;
+    layer: -1 | 1;
+    clockwiseSign: -1 | 1;
+  }
+>;
 
 /**
  * The renderer uses +X Right, +Y Up, and +Z Front. Three.js is right-handed:
- * a positive angle follows the right-hand rule around the returned outward
- * face axis. Viewed from outside while facing that face, a positive Three.js
- * angle is counterclockwise, so a canonical clockwise face turn is negative.
+ * a positive angle follows the right-hand rule around the positive coordinate
+ * axis. Clockwise turns of positive-axis faces (R, U, F) therefore use
+ * negative angles, while clockwise turns of negative-axis faces (L, D, B)
+ * use positive angles.
  *
  * Consequently R returns -PI / 2 around +X. Viewed while facing the Right
  * face, the visible R turn is clockwise. Prime turns reverse that direction,
- * and half turns use PI radians (the sign is visually equivalent at PI).
+ * and half turns use PI radians.
  */
 export function getMoveGeometry(move: Move): MoveGeometry {
-  const axis = FACE_AXES[move.face];
-  const angle = move.amount * (-Math.PI / 2);
+  const { axis, layer, clockwiseSign } = FACE_GEOMETRY[move.face];
+  const angle = move.amount * clockwiseSign * (Math.PI / 2);
 
   return {
     axis,
@@ -40,6 +48,6 @@ export function getMoveGeometry(move: Move): MoveGeometry {
       position[0] * axis[0] +
         position[1] * axis[1] +
         position[2] * axis[2] ===
-      1,
+      layer,
   };
 }

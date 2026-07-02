@@ -98,7 +98,7 @@ export function CubePrototype() {
           Experimental 3D scene
         </h2>
         <p className="mt-2 text-sm text-zinc-600">
-          Derived from the same cube state as the net. R-family move previews
+          Derived from the same cube state as the net. Pending move previews
           animate; other state changes snap to their resulting state.
         </p>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
