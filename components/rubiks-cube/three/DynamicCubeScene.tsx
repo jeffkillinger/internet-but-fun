@@ -21,6 +21,7 @@ type DynamicCubeSceneProps = {
   pendingMove: Move | null;
   selectedFace: SelectedFace | null;
   onSelectFace: (selectedFace: SelectedFace | null) => void;
+  onSelectMove: (move: Move) => void;
 };
 
 export function DynamicCubeScene(props: DynamicCubeSceneProps) {

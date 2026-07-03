@@ -135,6 +135,7 @@ export function CubePrototype() {
             pendingMove={pendingMove}
             selectedFace={selectedFace}
             onSelectFace={setSelectedFace}
+            onSelectMove={selectMove}
           />
         </div>
       </section>
