@@ -10,74 +10,106 @@ export type ArrowDirection = "clockwise" | "counterclockwise";
 
 export type ArrowAffordance = Readonly<{
   direction: ArrowDirection;
-  position: FaceNormal;
-  travelDirection: FaceNormal;
+  normal: FaceNormal;
+  right: FaceNormal;
+  up: FaceNormal;
+  startAngle: number;
+  endAngle: number;
   move: Move;
 }>;
 
-type ArrowDefinition = Readonly<{
-  clockwisePosition: FaceNormal;
-  counterclockwisePosition: FaceNormal;
-  travelDirection: FaceNormal;
+type FaceArrowDefinition = Readonly<{
+  normal: FaceNormal;
+  right: FaceNormal;
+  up: FaceNormal;
+  clockwiseArc: readonly [startAngle: number, endAngle: number];
+  counterclockwiseArc: readonly [startAngle: number, endAngle: number];
 }>;
 
+const degrees = (value: number) => (value * Math.PI) / 180;
+
 /**
- * World-space edge-displacement convention:
+ * Face-local arc convention, expressed in world coordinates for every face:
  *
- * Each clockwise arrow sits beyond the face's visual top edge and follows
- * that edge toward visual right. Each counterclockwise arrow sits beyond the
- * opposite edge, where counterclockwise sticker travel is also visual right.
- * The positions are outside the cube's +/-1.47 rendered extent.
+ * - `right` and `up` are how the face appears when viewed straight-on.
+ * - CW occupies the upper perimeter and runs 150° -> 30°.
+ * - CCW occupies the lower perimeter and runs 210° -> 330°.
+ *
+ * Decreasing angle is clockwise; increasing angle is counterclockwise. Thus
+ * each arrowhead tangent matches the visible sticker travel produced by the
+ * corresponding base or prime move.
  */
-const ARROW_DEFINITIONS: Readonly<Record<Face, ArrowDefinition>> = {
+const FACE_ARROW_DEFINITIONS: Readonly<Record<Face, FaceArrowDefinition>> = {
   U: {
-    clockwisePosition: [0, 1.75, -1.65],
-    counterclockwisePosition: [0, 1.75, 1.65],
-    travelDirection: [1, 0, 0],
+    normal: [0, 1, 0],
+    right: [1, 0, 0],
+    up: [0, 0, -1],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
   D: {
-    clockwisePosition: [0, -1.75, 1.65],
-    counterclockwisePosition: [0, -1.75, -1.65],
-    travelDirection: [1, 0, 0],
+    normal: [0, -1, 0],
+    right: [1, 0, 0],
+    up: [0, 0, 1],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
   L: {
-    clockwisePosition: [-1.75, 1.65, 0],
-    counterclockwisePosition: [-1.75, -1.65, 0],
-    travelDirection: [0, 0, 1],
+    normal: [-1, 0, 0],
+    right: [0, 0, 1],
+    up: [0, 1, 0],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
   R: {
-    clockwisePosition: [1.75, 1.65, 0],
-    counterclockwisePosition: [1.75, -1.65, 0],
-    travelDirection: [0, 0, -1],
+    normal: [1, 0, 0],
+    right: [0, 0, -1],
+    up: [0, 1, 0],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
   F: {
-    clockwisePosition: [0, 1.65, 1.75],
-    counterclockwisePosition: [0, -1.65, 1.75],
-    travelDirection: [1, 0, 0],
+    normal: [0, 0, 1],
+    right: [1, 0, 0],
+    up: [0, 1, 0],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
   B: {
-    clockwisePosition: [0, 1.65, -1.75],
-    counterclockwisePosition: [0, -1.65, -1.75],
-    travelDirection: [-1, 0, 0],
+    normal: [0, 0, -1],
+    right: [-1, 0, 0],
+    up: [0, 1, 0],
+    clockwiseArc: [degrees(150), degrees(30)],
+    counterclockwiseArc: [degrees(210), degrees(330)],
   },
 };
 
 export function getArrowAffordancesForFace(
   face: Face,
 ): readonly [ArrowAffordance, ArrowAffordance] {
-  const definition = ARROW_DEFINITIONS[face];
+  const definition = FACE_ARROW_DEFINITIONS[face];
+  const [clockwiseStart, clockwiseEnd] = definition.clockwiseArc;
+  const [counterclockwiseStart, counterclockwiseEnd] =
+    definition.counterclockwiseArc;
+  const frame = {
+    normal: definition.normal,
+    right: definition.right,
+    up: definition.up,
+  };
 
   return [
     {
       direction: "clockwise",
-      position: definition.clockwisePosition,
-      travelDirection: definition.travelDirection,
+      ...frame,
+      startAngle: clockwiseStart,
+      endAngle: clockwiseEnd,
       move: parseMoveNotation(face),
     },
     {
       direction: "counterclockwise",
-      position: definition.counterclockwisePosition,
-      travelDirection: definition.travelDirection,
+      ...frame,
+      startAngle: counterclockwiseStart,
+      endAngle: counterclockwiseEnd,
       move: parseMoveNotation(`${face}'`),
     },
   ];

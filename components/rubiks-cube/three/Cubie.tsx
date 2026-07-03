@@ -1,4 +1,5 @@
 import type { ThreeEvent } from "@react-three/fiber";
+import { Color } from "three";
 
 import type { CubeState } from "@/src/lib/cube";
 
@@ -30,6 +31,7 @@ export function Cubie({
   const faceColors = getCubieFaceColors(cube, position);
   const isSelected =
     selectedFace !== null && isCubieOnSelectedFace(position, selectedFace);
+  const isDimmed = selectedFace !== null && !isSelected;
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     if (event.delta > 2 || !event.face) return;
@@ -46,9 +48,7 @@ export function Cubie({
         <meshStandardMaterial
           key={face}
           attach={`material-${materialIndex}`}
-          color={faceColors[face]}
-          emissive={isSelected ? "#7c3aed" : "#000000"}
-          emissiveIntensity={isSelected ? 0.45 : 0}
+          color={new Color(faceColors[face]).multiplyScalar(isDimmed ? 0.3 : 1)}
           roughness={0.5}
         />
       ))}

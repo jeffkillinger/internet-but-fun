@@ -29,4 +29,32 @@ describe("getArrowAffordancesForFace", () => {
 
     expect(new Set(moves)).toHaveLength(2);
   });
+
+  it.each(FACES)(
+    "%s places clockwise and counterclockwise arcs on opposite perimeters",
+    (face) => {
+      const [clockwise, counterclockwise] =
+        getArrowAffordancesForFace(face);
+      const clockwiseMidpoint =
+        (clockwise.startAngle + clockwise.endAngle) / 2;
+      const counterclockwiseMidpoint =
+        (counterclockwise.startAngle + counterclockwise.endAngle) / 2;
+
+      expect(Math.sin(clockwiseMidpoint)).toBeGreaterThan(0);
+      expect(Math.sin(counterclockwiseMidpoint)).toBeLessThan(0);
+    },
+  );
+
+  it.each(FACES)(
+    "%s uses opposite angular directions for clockwise and counterclockwise",
+    (face) => {
+      const [clockwise, counterclockwise] =
+        getArrowAffordancesForFace(face);
+
+      expect(clockwise.endAngle).toBeLessThan(clockwise.startAngle);
+      expect(counterclockwise.endAngle).toBeGreaterThan(
+        counterclockwise.startAngle,
+      );
+    },
+  );
 });
