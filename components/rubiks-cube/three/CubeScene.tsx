@@ -9,6 +9,7 @@ import type { CubeState, Move } from "@/src/lib/cube";
 
 import { AnimatedRubiksCube3D } from "./AnimatedRubiksCube3D";
 import { CanonicalFaceLabels } from "./CanonicalFaceLabels";
+import type { ArrowDirection } from "./getArrowAffordancesForFace";
 import type { SelectedFace } from "./getSelectedFace";
 import { SelectedFaceArrows } from "./SelectedFaceArrows";
 
@@ -18,7 +19,7 @@ type CubeSceneProps = {
   pendingMove: Move | null;
   selectedFace: SelectedFace | null;
   onSelectFace: (selectedFace: SelectedFace | null) => void;
-  onSelectMove: (move: Move) => void;
+  onSelectArrow: (direction: ArrowDirection) => void;
 };
 
 export default function CubeScene({
@@ -27,7 +28,7 @@ export default function CubeScene({
   pendingMove,
   selectedFace,
   onSelectFace,
-  onSelectMove,
+  onSelectArrow,
 }: CubeSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -57,7 +58,7 @@ export default function CubeScene({
         {selectedFace ? (
           <SelectedFaceArrows
             selectedFace={selectedFace}
-            onSelectMove={onSelectMove}
+            onSelectArrow={onSelectArrow}
           />
         ) : null}
         <CanonicalFaceLabels />

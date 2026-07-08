@@ -1,11 +1,10 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { CatmullRomCurve3, Quaternion, Vector3 } from "three";
 
-import type { Move } from "@/src/lib/cube";
-
 import {
   getArrowAffordancesForFace,
   type ArrowAffordance,
+  type ArrowDirection,
 } from "./getArrowAffordancesForFace";
 import type { FaceNormal, SelectedFace } from "./getSelectedFace";
 
@@ -16,12 +15,12 @@ const UP = new Vector3(0, 1, 0);
 
 type SelectedFaceArrowsProps = {
   selectedFace: SelectedFace;
-  onSelectMove: (move: Move) => void;
+  onSelectArrow: (direction: ArrowDirection) => void;
 };
 
 type TurnArrowProps = {
   affordance: ArrowAffordance;
-  onSelectMove: (move: Move) => void;
+  onSelectArrow: (direction: ArrowDirection) => void;
 };
 
 function scaledVector(
@@ -54,7 +53,7 @@ function stopPointerEvent(event: ThreeEvent<PointerEvent>) {
   event.stopPropagation();
 }
 
-function TurnArrow({ affordance, onSelectMove }: TurnArrowProps) {
+function TurnArrow({ affordance, onSelectArrow }: TurnArrowProps) {
   const curve = getArcCurve(affordance);
   const arrowheadDirection = curve.getTangent(1).normalize();
   const arrowheadPosition = curve
@@ -71,7 +70,7 @@ function TurnArrow({ affordance, onSelectMove }: TurnArrowProps) {
     event.stopPropagation();
     if (event.delta > 2) return;
 
-    onSelectMove(affordance.move);
+    onSelectArrow(affordance.direction);
   }
 
   return (
@@ -106,7 +105,7 @@ function TurnArrow({ affordance, onSelectMove }: TurnArrowProps) {
 
 export function SelectedFaceArrows({
   selectedFace,
-  onSelectMove,
+  onSelectArrow,
 }: SelectedFaceArrowsProps) {
   const affordances = getArrowAffordancesForFace(selectedFace.face);
 
@@ -116,7 +115,7 @@ export function SelectedFaceArrows({
         <TurnArrow
           key={affordance.direction}
           affordance={affordance}
-          onSelectMove={onSelectMove}
+          onSelectArrow={onSelectArrow}
         />
       ))}
     </group>

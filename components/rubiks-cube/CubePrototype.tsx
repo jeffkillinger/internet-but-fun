@@ -16,6 +16,8 @@ import { DevPanel } from "./DevPanel";
 import { MoveControls } from "./MoveControls";
 import { MoveHistory } from "./MoveHistory";
 import { DynamicCubeScene } from "./three/DynamicCubeScene";
+import type { ArrowDirection } from "./three/getArrowAffordancesForFace";
+import { getNextArrowMove } from "./three/getNextArrowMove";
 import type { SelectedFace } from "./three/getSelectedFace";
 import { usePendingMove } from "./usePendingMove";
 
@@ -26,6 +28,9 @@ export function CubePrototype() {
   const [scramble, setScramble] = useState<Move[]>([]);
   const [history, setHistory] = useState<Move[]>([]);
   const [selectedFace, setSelectedFace] = useState<SelectedFace | null>(null);
+  const [pendingMoveSource, setPendingMoveSource] = useState<
+    "arrow" | "button" | null
+  >(null);
 
   const currentCube = useMemo(
     () => applyMoves(applyMoves(createSolvedCube(), scramble), history),
@@ -44,24 +49,42 @@ export function CubePrototype() {
   const solved = isSolved(currentCube);
   const previewSolved = isSolved(previewCube);
   const moveCount = countMoves(history);
+  const arrowDoubleTurnHint =
+    pendingMove &&
+    pendingMoveSource === "arrow" &&
+    selectedFace?.face === pendingMove.face &&
+    Math.abs(pendingMove.amount) === 1
+      ? `Tap the same arrow again for ${pendingMove.face}2.`
+      : null;
 
   function handleSelectMove(move: Move) {
     setSelectedFace(null);
+    setPendingMoveSource("button");
     selectMove(move);
+  }
+
+  function handleSelectArrow(direction: ArrowDirection) {
+    if (!selectedFace) return;
+
+    setPendingMoveSource("arrow");
+    selectMove(getNextArrowMove(selectedFace.face, direction, pendingMove));
   }
 
   function handleConfirmMove() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     confirmMove();
   }
 
   function handleCancelMove() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
   }
 
   function handleScramble() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
     setScramble(generateScramble(20));
     setHistory([]);
@@ -69,6 +92,7 @@ export function CubePrototype() {
 
   function handleReset() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
     setScramble([]);
     setHistory([]);
@@ -76,18 +100,21 @@ export function CubePrototype() {
 
   function handleUndo() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
     setHistory((moves) => moves.slice(0, -1));
   }
 
   function handleClearHistory() {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
     setHistory([]);
   }
 
   function handleApplySequence(moves: readonly Move[]) {
     setSelectedFace(null);
+    setPendingMoveSource(null);
     cancelMove();
     setHistory((currentHistory) => [...currentHistory, ...moves]);
   }
@@ -110,6 +137,9 @@ export function CubePrototype() {
             ? `Previewing: ${pendingMove.notation}`
             : "Current cube"}
         </p>
+        {arrowDoubleTurnHint ? (
+          <p className="mt-1 text-sm text-zinc-500">{arrowDoubleTurnHint}</p>
+        ) : null}
         <div className="mt-4 flex justify-center overflow-x-auto">
           <CubeNet currentCube={currentCube} previewCube={previewCube} />
         </div>
@@ -135,7 +165,7 @@ export function CubePrototype() {
             pendingMove={pendingMove}
             selectedFace={selectedFace}
             onSelectFace={setSelectedFace}
-            onSelectMove={selectMove}
+            onSelectArrow={handleSelectArrow}
           />
         </div>
       </section>
