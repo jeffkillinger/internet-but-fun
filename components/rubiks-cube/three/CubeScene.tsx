@@ -9,6 +9,7 @@ import type { CubeState, Move } from "@/src/lib/cube";
 
 import { AnimatedRubiksCube3D } from "./AnimatedRubiksCube3D";
 import { CanonicalFaceLabels } from "./CanonicalFaceLabels";
+import type { PendingAnimationIntent } from "./animationIntent";
 import type { ArrowDirection } from "./getArrowAffordancesForFace";
 import type { SelectedFace } from "./getSelectedFace";
 import { SelectedFaceArrows } from "./SelectedFaceArrows";
@@ -17,6 +18,7 @@ type CubeSceneProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  pendingAnimationIntent: PendingAnimationIntent | null;
   selectedFace: SelectedFace | null;
   onSelectFace: (selectedFace: SelectedFace | null) => void;
   onSelectArrow: (direction: ArrowDirection) => void;
@@ -26,6 +28,7 @@ export default function CubeScene({
   currentCube,
   previewCube,
   pendingMove,
+  pendingAnimationIntent,
   selectedFace,
   onSelectFace,
   onSelectArrow,
@@ -52,6 +55,7 @@ export default function CubeScene({
           currentCube={currentCube}
           previewCube={previewCube}
           pendingMove={pendingMove}
+          pendingAnimationIntent={pendingAnimationIntent}
           selectedFace={selectedFace}
           onSelectFace={onSelectFace}
         />

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 
 import type { CubeState, Move } from "@/src/lib/cube";
 
+import type { PendingAnimationIntent } from "./animationIntent";
 import type { ArrowDirection } from "./getArrowAffordancesForFace";
 import type { SelectedFace } from "./getSelectedFace";
 
@@ -20,6 +21,7 @@ type DynamicCubeSceneProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  pendingAnimationIntent: PendingAnimationIntent | null;
   selectedFace: SelectedFace | null;
   onSelectFace: (selectedFace: SelectedFace | null) => void;
   onSelectArrow: (direction: ArrowDirection) => void;

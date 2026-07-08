@@ -16,8 +16,9 @@ import { DevPanel } from "./DevPanel";
 import { MoveControls } from "./MoveControls";
 import { MoveHistory } from "./MoveHistory";
 import { DynamicCubeScene } from "./three/DynamicCubeScene";
+import type { PendingAnimationIntent } from "./three/animationIntent";
 import type { ArrowDirection } from "./three/getArrowAffordancesForFace";
-import { getNextArrowMove } from "./three/getNextArrowMove";
+import { getNextArrowPreview } from "./three/getNextArrowPreview";
 import type { SelectedFace } from "./three/getSelectedFace";
 import { usePendingMove } from "./usePendingMove";
 
@@ -28,9 +29,8 @@ export function CubePrototype() {
   const [scramble, setScramble] = useState<Move[]>([]);
   const [history, setHistory] = useState<Move[]>([]);
   const [selectedFace, setSelectedFace] = useState<SelectedFace | null>(null);
-  const [pendingMoveSource, setPendingMoveSource] = useState<
-    "arrow" | "button" | null
-  >(null);
+  const [pendingAnimationIntent, setPendingAnimationIntent] =
+    useState<PendingAnimationIntent | null>(null);
 
   const currentCube = useMemo(
     () => applyMoves(applyMoves(createSolvedCube(), scramble), history),
@@ -49,9 +49,14 @@ export function CubePrototype() {
   const solved = isSolved(currentCube);
   const previewSolved = isSolved(previewCube);
   const moveCount = countMoves(history);
+  const activePendingAnimationIntent =
+    pendingMove &&
+    pendingAnimationIntent?.moveNotation === pendingMove.notation
+      ? pendingAnimationIntent
+      : null;
   const arrowDoubleTurnHint =
     pendingMove &&
-    pendingMoveSource === "arrow" &&
+    activePendingAnimationIntent &&
     selectedFace?.face === pendingMove.face &&
     Math.abs(pendingMove.amount) === 1
       ? `Tap the same arrow again for ${pendingMove.face}2.`
@@ -59,32 +64,38 @@ export function CubePrototype() {
 
   function handleSelectMove(move: Move) {
     setSelectedFace(null);
-    setPendingMoveSource("button");
+    setPendingAnimationIntent(null);
     selectMove(move);
   }
 
   function handleSelectArrow(direction: ArrowDirection) {
     if (!selectedFace) return;
 
-    setPendingMoveSource("arrow");
-    selectMove(getNextArrowMove(selectedFace.face, direction, pendingMove));
+    const nextPreview = getNextArrowPreview(
+      selectedFace.face,
+      direction,
+      pendingMove,
+    );
+
+    setPendingAnimationIntent(nextPreview.animationIntent);
+    selectMove(nextPreview.move);
   }
 
   function handleConfirmMove() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     confirmMove();
   }
 
   function handleCancelMove() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
   }
 
   function handleScramble() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
     setScramble(generateScramble(20));
     setHistory([]);
@@ -92,7 +103,7 @@ export function CubePrototype() {
 
   function handleReset() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
     setScramble([]);
     setHistory([]);
@@ -100,21 +111,21 @@ export function CubePrototype() {
 
   function handleUndo() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
     setHistory((moves) => moves.slice(0, -1));
   }
 
   function handleClearHistory() {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
     setHistory([]);
   }
 
   function handleApplySequence(moves: readonly Move[]) {
     setSelectedFace(null);
-    setPendingMoveSource(null);
+    setPendingAnimationIntent(null);
     cancelMove();
     setHistory((currentHistory) => [...currentHistory, ...moves]);
   }
@@ -163,6 +174,7 @@ export function CubePrototype() {
             currentCube={currentCube}
             previewCube={previewCube}
             pendingMove={pendingMove}
+            pendingAnimationIntent={activePendingAnimationIntent}
             selectedFace={selectedFace}
             onSelectFace={setSelectedFace}
             onSelectArrow={handleSelectArrow}

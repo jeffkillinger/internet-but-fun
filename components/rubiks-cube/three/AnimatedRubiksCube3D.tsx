@@ -4,7 +4,11 @@ import { Group, Vector3 } from "three";
 
 import type { CubeState, Move } from "@/src/lib/cube";
 
-import { getMoveGeometry, type MoveGeometry } from "./getMoveGeometry";
+import {
+  getMoveGeometryForAnimation,
+  type PendingAnimationIntent,
+} from "./animationIntent";
+import type { MoveGeometry } from "./getMoveGeometry";
 import type { SelectedFace } from "./getSelectedFace";
 import { CUBIE_POSITIONS, RubiksCube3D } from "./RubiksCube3D";
 
@@ -20,6 +24,7 @@ type AnimatedRubiksCube3DProps = {
   currentCube: CubeState;
   previewCube: CubeState;
   pendingMove: Move | null;
+  pendingAnimationIntent: PendingAnimationIntent | null;
   selectedFace: SelectedFace | null;
   onSelectFace: (selectedFace: SelectedFace) => void;
 };
@@ -32,6 +37,7 @@ export function AnimatedRubiksCube3D({
   currentCube,
   previewCube,
   pendingMove,
+  pendingAnimationIntent,
   selectedFace,
   onSelectFace,
 }: AnimatedRubiksCube3DProps) {
@@ -43,7 +49,7 @@ export function AnimatedRubiksCube3D({
   const previousCurrentCube = useRef(currentCube);
 
   const geometry = isAnimatedMove(pendingMove)
-    ? getMoveGeometry(pendingMove)
+    ? getMoveGeometryForAnimation(pendingMove, pendingAnimationIntent)
     : null;
   const [slicePositions, stationaryPositions] = useMemo(() => {
     if (!geometry) return [[], CUBIE_POSITIONS] as const;
@@ -72,7 +78,10 @@ export function AnimatedRubiksCube3D({
     destination.visible = !shouldStart;
 
     if (shouldStart) {
-      const moveGeometry = getMoveGeometry(pendingMove);
+      const moveGeometry = getMoveGeometryForAnimation(
+        pendingMove,
+        pendingAnimationIntent,
+      );
       animation.current = {
         elapsed: 0,
         duration:
@@ -82,7 +91,7 @@ export function AnimatedRubiksCube3D({
     }
 
     previousCurrentCube.current = currentCube;
-  }, [currentCube, pendingMove, previewCube]);
+  }, [currentCube, pendingAnimationIntent, pendingMove, previewCube]);
 
   useFrame((_, delta) => {
     const active = animation.current;

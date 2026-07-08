@@ -4,9 +4,31 @@ import {
   type Move,
 } from "../../../src/lib/cube";
 
+import type { PendingAnimationIntent } from "./animationIntent";
 import type { ArrowDirection } from "./getArrowAffordancesForFace";
 
-export function getNextArrowMove(
+export type ArrowPreview = Readonly<{
+  move: Move;
+  animationIntent: PendingAnimationIntent;
+}>;
+
+export function getNextArrowPreview(
+  face: Face,
+  direction: ArrowDirection,
+  pendingMove: Move | null,
+): ArrowPreview {
+  const move = getNextArrowMove(face, direction, pendingMove);
+
+  return {
+    move,
+    animationIntent: {
+      direction,
+      moveNotation: move.notation,
+    },
+  };
+}
+
+function getNextArrowMove(
   face: Face,
   direction: ArrowDirection,
   pendingMove: Move | null,
