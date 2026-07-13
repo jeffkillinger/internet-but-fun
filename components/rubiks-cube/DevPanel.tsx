@@ -1,12 +1,16 @@
 import { FormEvent, useState } from "react";
 
 import {
+  applyMoves,
+  createSolvedCube,
   hashCubeState,
   parseMoveNotation,
   serializeCube,
   type CubeState,
   type Move,
+  type MoveNotation,
 } from "@/src/lib/cube";
+import type { StatusFullResponse } from "@/src/lib/api/types";
 
 type DevPanelProps = {
   currentCube: CubeState;
@@ -25,6 +29,24 @@ function formatMoves(moves: readonly Move[]) {
     : "None";
 }
 
+type ServerStatusProbe =
+  | {
+      status: "idle" | "loading";
+    }
+  | {
+      status: "success";
+      epochId: string;
+      scramble: MoveNotation[];
+      serializedCube: string;
+      localHash: string;
+      serverHash: string;
+      hashesMatch: boolean;
+    }
+  | {
+      status: "error";
+      message: string;
+    };
+
 export function DevPanel({
   currentCube,
   previewCube,
@@ -38,6 +60,8 @@ export function DevPanel({
   const [sequence, setSequence] = useState("");
   const [sequenceError, setSequenceError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [serverStatusProbe, setServerStatusProbe] =
+    useState<ServerStatusProbe>({ status: "idle" });
   const serializedCurrentCube = serializeCube(currentCube);
   const serializedPreviewCube = serializeCube(previewCube);
 
@@ -70,6 +94,40 @@ export function DevPanel({
       setCopyStatus("Copied");
     } catch {
       setCopyStatus("Copy failed");
+    }
+  }
+
+  async function handleLoadStatusFull() {
+    setServerStatusProbe({ status: "loading" });
+
+    try {
+      const response = await fetch("/api/rubiks-cube/status?gameId=rubiks-cube");
+      if (!response.ok) {
+        throw new Error(`StatusFull request failed with ${response.status}.`);
+      }
+
+      const status = (await response.json()) as StatusFullResponse;
+      const reconstructedCube = applyMoves(createSolvedCube(), status.scramble);
+      const serializedCube = serializeCube(reconstructedCube);
+      const localHash = hashCubeState(serializedCube);
+
+      setServerStatusProbe({
+        status: "success",
+        epochId: status.epochId,
+        scramble: status.scramble,
+        serializedCube,
+        localHash,
+        serverHash: status.stateHash,
+        hashesMatch: localHash === status.stateHash,
+      });
+    } catch (error) {
+      setServerStatusProbe({
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "StatusFull verification failed.",
+      });
     }
   }
 
@@ -108,6 +166,69 @@ export function DevPanel({
         ) : null}
       </form>
       <dl className="mt-4 grid gap-3">
+        <div>
+          <dt className="font-medium">Server StatusFull probe</dt>
+          <dd className="mt-2">
+            <button
+              type="button"
+              onClick={handleLoadStatusFull}
+              disabled={serverStatusProbe.status === "loading"}
+              className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Load StatusFull from Server
+            </button>
+            {serverStatusProbe.status === "loading" ? (
+              <p className="mt-2 text-sm text-zinc-600" role="status">
+                Loading
+              </p>
+            ) : null}
+            {serverStatusProbe.status === "error" ? (
+              <p className="mt-2 text-sm text-red-700" role="alert">
+                {serverStatusProbe.message}
+              </p>
+            ) : null}
+            {serverStatusProbe.status === "success" ? (
+              <dl className="mt-3 grid gap-2 text-sm">
+                <div>
+                  <dt className="font-medium">Epoch ID</dt>
+                  <dd className="mt-1 break-all font-mono">
+                    {serverStatusProbe.epochId}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Returned scramble</dt>
+                  <dd className="mt-1 break-words font-mono">
+                    {serverStatusProbe.scramble.join(" ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Reconstructed cube</dt>
+                  <dd className="mt-1 break-all font-mono">
+                    {serverStatusProbe.serializedCube}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Local hash</dt>
+                  <dd className="mt-1 font-mono">
+                    {serverStatusProbe.localHash}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Server hash</dt>
+                  <dd className="mt-1 font-mono">
+                    {serverStatusProbe.serverHash}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Hashes match</dt>
+                  <dd className="mt-1 font-mono">
+                    {String(serverStatusProbe.hashesMatch)}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
+          </dd>
+        </div>
         <div>
           <dt className="font-medium">Pending move (temporary)</dt>
           <dd className="mt-1 font-mono text-sm">
