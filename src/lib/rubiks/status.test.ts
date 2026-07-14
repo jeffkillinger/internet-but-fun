@@ -13,7 +13,14 @@ import {
   hashScrambleState,
   reconstructSerializedCubeFromScramble,
 } from "./epoch";
-import { createStatusFullResponse, toPublicCommittedMove } from "./status";
+import {
+  computeQueueSummary,
+  computeViewerStatus,
+  createStatusFullResponse,
+  toPublicCommittedMove,
+  toPublicTurnSummary,
+  toYourTurnSummary,
+} from "./status";
 
 const scramble: MoveNotation[] = ["R", "U", "F2"];
 
@@ -100,5 +107,151 @@ describe("Rubik's Cube server status helpers", () => {
     });
 
     expect(response.bestScoreMoves).toBeNull();
+  });
+
+  it("computes can_play for empty viewer rows", () => {
+    expect(
+      computeViewerStatus({
+        actorId: "11111111-1111-4111-8111-111111111111",
+        claim: null,
+        turn: null,
+        queueEntry: null,
+      }),
+    ).toBe("can_play");
+  });
+
+  it("gives actor claims highest viewerStatus precedence", () => {
+    const actorId = "11111111-1111-4111-8111-111111111111";
+
+    expect(
+      computeViewerStatus({
+        actorId,
+        claim: { actor_id: actorId },
+        turn: {
+          id: "turn-1",
+          actor_id: actorId,
+          status: "active",
+          expires_at: new Date("2026-07-13T12:00:00.000Z"),
+          pending_move: null,
+        },
+        queueEntry: {
+          id: "queue-1",
+          actor_id: actorId,
+          joined_at: new Date("2026-07-13T11:00:00.000Z"),
+        },
+      }),
+    ).toBe("already_moved");
+  });
+
+  it("computes queued, ready_check, and active viewer states", () => {
+    const actorId = "11111111-1111-4111-8111-111111111111";
+
+    expect(
+      computeViewerStatus({
+        actorId,
+        claim: null,
+        turn: null,
+        queueEntry: {
+          id: "queue-1",
+          actor_id: actorId,
+          joined_at: new Date("2026-07-13T11:00:00.000Z"),
+        },
+      }),
+    ).toBe("queued");
+    expect(
+      computeViewerStatus({
+        actorId,
+        claim: null,
+        turn: {
+          id: "turn-1",
+          actor_id: actorId,
+          status: "ready_check",
+          expires_at: new Date("2026-07-13T12:00:00.000Z"),
+          pending_move: null,
+        },
+        queueEntry: null,
+      }),
+    ).toBe("ready_check");
+    expect(
+      computeViewerStatus({
+        actorId,
+        claim: null,
+        turn: {
+          id: "turn-1",
+          actor_id: actorId,
+          status: "active",
+          expires_at: new Date("2026-07-13T12:00:00.000Z"),
+          pending_move: null,
+        },
+        queueEntry: null,
+      }),
+    ).toBe("active");
+  });
+
+  it("returns queue length and viewer position with deterministic ordering", () => {
+    const actorId = "22222222-2222-4222-8222-222222222222";
+    const queue = computeQueueSummary({
+      actorId,
+      queueEntries: [
+        {
+          id: "queue-b",
+          actor_id: actorId,
+          joined_at: new Date("2026-07-13T11:00:00.000Z"),
+        },
+        {
+          id: "queue-a",
+          actor_id: "11111111-1111-4111-8111-111111111111",
+          joined_at: new Date("2026-07-13T11:00:00.000Z"),
+        },
+      ],
+    });
+
+    expect(queue).toEqual({ queueLength: 2, viewerPosition: 2 });
+    expect(
+      computeQueueSummary({
+        actorId: "33333333-3333-4333-8333-333333333333",
+        queueEntries: [],
+      }),
+    ).toEqual({ queueLength: 0, viewerPosition: null });
+  });
+
+  it("returns private yourTurn only to the owning actor", () => {
+    const owner = "11111111-1111-4111-8111-111111111111";
+    const turn = {
+      id: "turn-private",
+      actor_id: owner,
+      status: "active" as const,
+      expires_at: new Date("2026-07-13T12:00:00.000Z"),
+      pending_move: "R",
+    };
+
+    expect(toYourTurnSummary({ turn, actorId: owner })).toEqual({
+      turnId: "turn-private",
+      status: "active",
+      expiresAt: "2026-07-13T12:00:00.000Z",
+    });
+    expect(
+      toYourTurnSummary({
+        turn,
+        actorId: "22222222-2222-4222-8222-222222222222",
+      }),
+    ).toBeNull();
+  });
+
+  it("never includes turnId in public activeTurn", () => {
+    const publicTurn = toPublicTurnSummary({
+      id: "turn-private",
+      actor_id: "11111111-1111-4111-8111-111111111111",
+      status: "active",
+      expires_at: new Date("2026-07-13T12:00:00.000Z"),
+      pending_move: "R",
+    });
+
+    expect(publicTurn).toEqual({
+      status: "active",
+      expiresAt: "2026-07-13T12:00:00.000Z",
+      pendingMove: "R",
+    });
+    expect(publicTurn).not.toHaveProperty("turnId");
   });
 });
