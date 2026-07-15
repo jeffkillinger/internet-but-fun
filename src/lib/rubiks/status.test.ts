@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   applyMoves,
@@ -19,8 +19,8 @@ import {
   createStatusFullResponse,
   toPublicCommittedMove,
   toPublicTurnSummary,
-  toYourTurnSummary,
 } from "./status";
+import { deriveTurnToken, mintYourTurnSummary } from "./turns";
 
 const scramble: MoveNotation[] = ["R", "U", "F2"];
 
@@ -216,6 +216,8 @@ describe("Rubik's Cube server status helpers", () => {
   });
 
   it("returns private yourTurn only to the owning actor", () => {
+    vi.stubEnv("TURN_TOKEN_SECRET", "test-turn-secret");
+
     const owner = "11111111-1111-4111-8111-111111111111";
     const turn = {
       id: "turn-private",
@@ -225,13 +227,13 @@ describe("Rubik's Cube server status helpers", () => {
       pending_move: "R",
     };
 
-    expect(toYourTurnSummary({ turn, actorId: owner })).toEqual({
-      turnId: "turn-private",
+    expect(mintYourTurnSummary({ turn, actorId: owner })).toEqual({
+      turnId: deriveTurnToken("turn-private"),
       status: "active",
       expiresAt: "2026-07-13T12:00:00.000Z",
     });
     expect(
-      toYourTurnSummary({
+      mintYourTurnSummary({
         turn,
         actorId: "22222222-2222-4222-8222-222222222222",
       }),

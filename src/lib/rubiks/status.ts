@@ -5,13 +5,13 @@ import type {
   PublicTurnSummary,
   QueueSummary,
   StatusFullResponse,
-  YourTurnSummary,
   ViewerStatus,
 } from "@/src/lib/api/types";
 import { parseMoveNotation } from "../cube";
 
 import { getSql } from "../db/client";
 import { parseStoredScramble } from "./epoch";
+import { mintYourTurnSummary, TurnTokenError } from "./turns";
 
 export class PublicApiError extends Error {
   constructor(
@@ -20,8 +20,7 @@ export class PublicApiError extends Error {
       | "conflicting_viewer_state"
       | "invalid_request"
       | "malformed_stored_scramble"
-      | "no_active_epoch"
-      | "turn_token_unrecoverable",
+      | "no_active_epoch",
     message: string,
     public readonly status = 500,
   ) {
@@ -29,7 +28,7 @@ export class PublicApiError extends Error {
   }
 }
 
-type EpochRow = {
+export type EpochRow = {
   id: string;
   game_id: GameId;
   scramble: unknown;
@@ -44,17 +43,17 @@ type MoveEventRow = {
   created_at: Date;
 };
 
-type ClaimRow = {
+export type ClaimRow = {
   actor_id: string;
 };
 
-type QueueEntryRow = {
+export type QueueEntryRow = {
   id: string;
   actor_id: string;
   joined_at: Date;
 };
 
-type TurnRow = {
+export type TurnRow = {
   id: string;
   actor_id: string;
   status: "ready_check" | "active";
@@ -132,19 +131,6 @@ export function toPublicTurnSummary(turn: TurnRow | null): PublicTurnSummary | n
   };
 }
 
-export function toYourTurnSummary(input: {
-  turn: TurnRow | null;
-  actorId: ActorId;
-}): YourTurnSummary | null {
-  if (!input.turn || input.turn.actor_id !== input.actorId) return null;
-
-  return {
-    turnId: input.turn.id,
-    status: input.turn.status,
-    expiresAt: input.turn.expires_at.toISOString(),
-  };
-}
-
 export function computeViewerStatus(input: {
   claim: ClaimRow | null;
   turn: TurnRow | null;
@@ -187,19 +173,6 @@ function selectCurrentTurn(rows: TurnRow[]): TurnRow | null {
   }
 
   return rows[0] ?? null;
-}
-
-function assertRecoverableTurnToken(input: {
-  currentTurn: TurnRow | null;
-  actorId: ActorId;
-}): void {
-  if (input.currentTurn?.actor_id !== input.actorId) return;
-
-  throw new PublicApiError(
-    "turn_token_unrecoverable",
-    "Private turn credential is unavailable.",
-    500,
-  );
 }
 
 export function createStatusFullResponse(input: {
@@ -252,7 +225,7 @@ export function createStatusFullResponse(input: {
     viewerStatus,
     queue,
     activeTurn: toPublicTurnSummary(currentTurn),
-    yourTurn: actorId ? toYourTurnSummary({ turn: currentTurn, actorId }) : null,
+    yourTurn: actorId ? mintYourTurnSummary({ turn: currentTurn, actorId }) : null,
   };
 }
 
@@ -270,77 +243,88 @@ export async function getStatusFullResponse(
 
   try {
     const sql = getSql();
-    const [epoch] = await sql<EpochRow[]>`
-      select id::text, game_id, scramble, cube_version, state_hash, move_count
-      from epochs
-      where game_id = 'rubiks-cube' and status = 'active'
-      order by started_at desc
-      limit 1
-    `;
 
-    if (!epoch) {
-      throw new PublicApiError(
-        "no_active_epoch",
-        "No active Rubik's Cube epoch exists.",
-        404,
-      );
-    }
+    // A consistent snapshot matters as soon as a concurrent writer exists
+    // (join, as of Milestone 03) — otherwise these independent queries can
+    // straddle a commit and assemble a response from two different moments.
+    return await sql.begin("isolation level repeatable read", async (tx) => {
+      const [epoch] = await tx<EpochRow[]>`
+        -- op:status_active_epoch
+        select id::text, game_id, scramble, cube_version, state_hash, move_count
+        from epochs
+        where game_id = 'rubiks-cube' and status = 'active'
+        order by started_at desc
+        limit 1
+      `;
 
-    const moveRows = await sql<MoveEventRow[]>`
-      select seq, payload, created_at
-      from events
-      where epoch_id = ${epoch.id}::uuid and event_type = 'move_committed'
-      order by seq asc
-    `;
-    const [bestScore] = await sql<BestScoreRow[]>`
-      select min(move_count)::int as best_score_moves
-      from epochs
-      where game_id = 'rubiks-cube' and status = 'completed'
-    `;
-    const claimRows = await sql<ClaimRow[]>`
-      select actor_id::text
-      from actor_claims
-      where epoch_id = ${epoch.id}::uuid and actor_id = ${actorId}::uuid
-    `;
-    const queueRows = await sql<QueueEntryRow[]>`
-      select id::text, actor_id::text, joined_at
-      from queue_entries
-      where epoch_id = ${epoch.id}::uuid and status = 'queued'
-      order by joined_at asc, id asc
-    `;
-    const viewerQueueRows = queueRows.filter((row) => row.actor_id === actorId);
-    const turnRows = await sql<TurnRow[]>`
-      select id::text, actor_id::text, status, expires_at, pending_move
-      from turns
-      where epoch_id = ${epoch.id}::uuid and status in ('ready_check', 'active')
-      order by
-        case status when 'active' then 0 else 1 end,
-        expires_at asc,
-        id asc
-    `;
+      if (!epoch) {
+        throw new PublicApiError(
+          "no_active_epoch",
+          "No active Rubik's Cube epoch exists.",
+          404,
+        );
+      }
 
-    const currentTurn = selectCurrentTurn(turnRows);
+      const moveRows = await tx<MoveEventRow[]>`
+        -- op:status_move_log
+        select seq, payload, created_at
+        from events
+        where epoch_id = ${epoch.id}::uuid and event_type = 'move_committed'
+        order by seq asc
+      `;
+      const [bestScore] = await tx<BestScoreRow[]>`
+        -- op:status_best_score
+        select min(move_count)::int as best_score_moves
+        from epochs
+        where game_id = 'rubiks-cube' and status = 'completed'
+      `;
+      const claimRows = await tx<ClaimRow[]>`
+        -- op:status_claim
+        select actor_id::text
+        from actor_claims
+        where epoch_id = ${epoch.id}::uuid and actor_id = ${actorId}::uuid
+      `;
+      const queueRows = await tx<QueueEntryRow[]>`
+        -- op:status_queue_entries
+        select id::text, actor_id::text, joined_at
+        from queue_entries
+        where epoch_id = ${epoch.id}::uuid and status = 'queued'
+        order by joined_at asc, id asc
+      `;
+      const viewerQueueRows = queueRows.filter((row) => row.actor_id === actorId);
+      const turnRows = await tx<TurnRow[]>`
+        -- op:status_current_turn
+        select id::text, actor_id::text, status, expires_at, pending_move
+        from turns
+        where epoch_id = ${epoch.id}::uuid and status in ('ready_check', 'active')
+        order by
+          case status when 'active' then 0 else 1 end,
+          expires_at asc,
+          id asc
+      `;
 
-    assertRecoverableTurnToken({ currentTurn, actorId });
+      const currentTurn = selectCurrentTurn(turnRows);
 
-    return createStatusFullResponse({
-      epoch,
-      moveLog: moveRows.map(toPublicCommittedMove),
-      bestScoreMoves: bestScore?.best_score_moves ?? null,
-      actorId,
-      claim: assertAtMostOne(
-        claimRows,
-        "Multiple actor claims exist for the current epoch.",
-      ),
-      queueEntries: queueRows,
-      viewerQueueEntry: assertAtMostOne(
-        viewerQueueRows,
-        "Multiple current queue entries exist for this actor.",
-      ),
-      currentTurn,
+      return createStatusFullResponse({
+        epoch,
+        moveLog: moveRows.map(toPublicCommittedMove),
+        bestScoreMoves: bestScore?.best_score_moves ?? null,
+        actorId,
+        claim: assertAtMostOne(
+          claimRows,
+          "Multiple actor claims exist for the current epoch.",
+        ),
+        queueEntries: queueRows,
+        viewerQueueEntry: assertAtMostOne(
+          viewerQueueRows,
+          "Multiple current queue entries exist for this actor.",
+        ),
+        currentTurn,
+      });
     });
   } catch (error) {
     if (error instanceof PublicApiError) throw error;
+    if (error instanceof TurnTokenError) throw error;
 
     throw new PublicApiError(
       "database_unavailable",

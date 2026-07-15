@@ -1,14 +1,15 @@
-import type { GameId } from "@/src/lib/api/types";
+import type { GameId } from "../../../../src/lib/api/types";
 import {
   ACTOR_COOKIE_NAME,
   ActorIdentityError,
   resolveActorIdentity,
   serializeActorCookie,
-} from "@/src/lib/rubiks/actor-identity";
+} from "../../../../src/lib/rubiks/actor-identity";
 import {
   getStatusFullResponse,
   PublicApiError,
-} from "@/src/lib/rubiks/status";
+} from "../../../../src/lib/rubiks/status";
+import { TurnTokenError } from "../../../../src/lib/rubiks/turns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,18 @@ function identityErrorResponse(): Response {
       error: {
         code: "identity_unavailable",
         message: "Actor identity is unavailable.",
+      },
+    },
+    { status: 500 },
+  );
+}
+
+function turnTokenErrorResponse(): Response {
+  return Response.json(
+    {
+      error: {
+        code: "turn_token_unavailable",
+        message: "Turn credentials are unavailable.",
       },
     },
     { status: 500 },
@@ -72,6 +85,10 @@ export async function GET(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof ActorIdentityError) {
       return identityErrorResponse();
+    }
+
+    if (error instanceof TurnTokenError) {
+      return turnTokenErrorResponse();
     }
 
     if (error instanceof PublicApiError) {
