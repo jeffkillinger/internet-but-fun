@@ -113,7 +113,6 @@ type SubmitRubiksCubeMoveAccepted = {
   moveNumber: number;
   cubeVersion: number;
   stateHash: string;
-  nextTurnStartsAt: string;
 };
 ```
 
